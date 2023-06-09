@@ -8,6 +8,8 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.forms.InputProvider
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
+import io.ktor.client.request.headers
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
@@ -21,36 +23,35 @@ class PhotoRoomApi {
 
     //curl -H 'x-api-key: abc123def456' -f https://sdk.photoroom.com/v1/segment -F 'image_file=@/absolute/path/to/image.jpg' -o /absolute/path/to/result.png
 
-    suspend fun removeBackground(inputStream: InputStream): Bitmap? {
-
+    suspend fun removeBackground(url: InputStream): Bitmap? {
         val client = HttpClient(CIO)
+        //curl -H 'x-api-key: abc123def456' -f https://sdk.photoroom.com/v1/segment -F 'image_file=@/absolute/path/to/image.jpg' -o /absolute/path/to/result.png
+        Log.d("POSTING IMAGE", "edit photo")
 
+//
         val formData = formData {
-            append(
-                "image_file".quote(),
-                InputProvider { inputStream.asInput() },
-                Headers.build {
-                    append(HttpHeaders.ContentDisposition, "filename=10000032945")
-                }
-            )
+            append("image_file".quote(), InputProvider { url.asInput() }, Headers.build {
+                append(HttpHeaders.ContentDisposition, "filename=1000002945")
+            })
         }
         Log.d("FORM DATA DONE", "edit photo")
         try {
-            val response =
-                client.submitFormWithBinaryData(PHOTOROOM_URL, formData) {
-                    headers {
-                        append("x-api-key", TOKEN_PHOTOROOM)
-                    }
+            val response = client.submitFormWithBinaryData(PHOTOROOM_URL, formData) {
+                headers {
+                    append("x-api-key", TOKEN_PHOTOROOM)
                 }
-            Log.d("Response status", "${response.status}")
-            //  val inputStream = response.bodyAsChannel().toInputStream()
-            //   var bitmapResult = BitmapFactory.decodeStream(inputStream)
-            //  return bitmapResult
+            }
+            val inputStream = response.bodyAsChannel().toInputStream()
+            var bitmapResult = BitmapFactory.decodeStream(inputStream)
+            println(response.status)
+            return bitmapResult
         } catch (e: Exception) {
-            Log.d("Exception while removing BG: ", "${e.message}")
+            Log.d("Exc", "${e.message}")
         }
+
         client.close()
-        Log.d("POSTING IMAGE DONE", "response status")
+
+        Log.d("POSTING IMAGE DONE", "response status")// ${response.status}")
         return null
     }
 
