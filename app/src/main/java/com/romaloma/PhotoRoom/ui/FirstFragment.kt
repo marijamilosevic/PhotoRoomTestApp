@@ -15,6 +15,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.romaloma.PhotoRoom.BitmapList
 import com.romaloma.PhotoRoom.R
+import com.romaloma.PhotoRoom.api.PhotoRoomApi
 import com.romaloma.PhotoRoom.databinding.FragmentFirstBinding
 
 
@@ -31,8 +32,9 @@ class FirstFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var adapter: RecyclerViewAdapter
+    private lateinit var viewModel: PhotoViewModel
+    private val photoRoomApi = PhotoRoomApi()
     var list = BitmapList()
-
 
     private val changeImage =
         registerForActivityResult(
@@ -45,6 +47,8 @@ class FirstFragment : Fragment() {
                 activity?.let { it1 ->
                     if (imgUri != null) {
                         list.addImageFromUri(imgUri, it1.contentResolver)
+                        val inputStream = context?.contentResolver?.openInputStream(imgUri)!!
+                        inputStream.let { inputStream -> viewModel.editPhoto(inputStream) }
                     }
                 }
                 adapter.updateItems(list.bitmapList)
@@ -74,6 +78,9 @@ class FirstFragment : Fragment() {
         binding.fab.setOnClickListener {
             pickImageFromGallery()
         }
+
+        viewModel = PhotoViewModel(photoRoomApi)
+
     }
 
     private fun openImage() {
@@ -85,7 +92,6 @@ class FirstFragment : Fragment() {
             Intent(Intent.ACTION_PICK, MediaStore.Images.Media.INTERNAL_CONTENT_URI)
         changeImage.launch(pickImg)
     }
-
 
     override fun onDestroyView() {
         super.onDestroyView()
