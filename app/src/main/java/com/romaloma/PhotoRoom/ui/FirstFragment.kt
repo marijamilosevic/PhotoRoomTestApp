@@ -3,6 +3,7 @@ package com.romaloma.PhotoRoom.ui
 import RecyclerViewAdapter
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
@@ -11,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.romaloma.PhotoRoom.BitmapList
@@ -80,6 +82,14 @@ class FirstFragment : Fragment() {
         }
 
         viewModel = PhotoViewModel(photoRoomApi)
+        // Create the observer which updates the UI.
+        val bitmapObserver = Observer<Bitmap?> { bitmap ->
+            // Update the UI, in this case, a TextView.
+            binding.displayresult.setImageBitmap(bitmap)
+        }
+
+        // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
+        viewModel.data.observe(viewLifecycleOwner, bitmapObserver)
 
     }
 
