@@ -3,7 +3,6 @@ package com.romaloma.PhotoRoom.ui
 import RecyclerViewAdapter
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
@@ -12,12 +11,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
-import com.romaloma.PhotoRoom.BitmapList
 import com.romaloma.PhotoRoom.R
-import com.romaloma.PhotoRoom.api.PhotoRoomApi
 import com.romaloma.PhotoRoom.databinding.FragmentFirstBinding
 
 
@@ -33,10 +30,9 @@ class FirstFragment : Fragment() {
     // onDestroyView.
     private val binding get() = _binding!!
 
+    private val sharedPhotoViewModel: PhotoViewModel by activityViewModels()
+
     private lateinit var adapter: RecyclerViewAdapter
-    private lateinit var viewModel: PhotoViewModel
-    private val photoRoomApi = PhotoRoomApi()
-    var list = BitmapList()
 
     private val changeImage =
         registerForActivityResult(
@@ -46,22 +42,17 @@ class FirstFragment : Fragment() {
                 val data = it.data
                 val imgUri = data?.data
                 Log.d("SELECTING IMAGE", "Uri: $imgUri")
-                activity?.let { it1 ->
-                    if (imgUri != null) {
-                        list.addImageFromUri(imgUri, it1.contentResolver)
-                        val inputStream = context?.contentResolver?.openInputStream(imgUri)!!
-                        inputStream.let { inputStream -> viewModel.editPhoto(inputStream) }
-                    }
-                }
-                adapter.updateItems(list.bitmapList)
-            }
 
+                if (imgUri != null) {
+                    sharedPhotoViewModel.addPhoto(imgUri, requireActivity().contentResolver)
+                }
+            }
         }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
 
         _binding = FragmentFirstBinding.inflate(inflater, container, false)
         return binding.root
@@ -71,7 +62,7 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        adapter = RecyclerViewAdapter(requireContext()) { openImage() }
+        adapter = RecyclerViewAdapter(requireContext()) { pos -> openImage(pos) }
         binding.imageRecyclerView.adapter = adapter
 
         val layoutManager = GridLayoutManager(requireContext(), 3)
@@ -81,20 +72,15 @@ class FirstFragment : Fragment() {
             pickImageFromGallery()
         }
 
-        viewModel = PhotoViewModel(photoRoomApi)
-        // Create the observer which updates the UI.
-        val bitmapObserver = Observer<Bitmap?> { bitmap ->
-            // Update the UI, in this case, a TextView.
-            binding.displayresult.setImageBitmap(bitmap)
+        sharedPhotoViewModel.dataList.observe(viewLifecycleOwner) {
+            adapter.updateItems(it)
         }
-
-        // Observe the LiveData, passing in this activity as the LifecycleOwner and the observer.
-        viewModel.data.observe(viewLifecycleOwner, bitmapObserver)
-
     }
 
-    private fun openImage() {
-        findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
+    private fun openImage(pos: Int) {
+        val bundle = Bundle()
+        bundle.putInt("imagePosition", pos)
+        findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment, bundle)
     }
 
     private fun pickImageFromGallery() {
